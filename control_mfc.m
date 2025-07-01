@@ -12,13 +12,13 @@ flush(arduino);
 % wait for Arduino to be ready to send/receive data
 waitForArduino(arduino);
 
-% ask user to input flow rate
-flow_rate = inputFlowRate();
+% ask user to input flow rate and convert to string to send over serial
+flow_rate = num2str(inputFlowRate());
 
 % set flow rate for mass flow controller
-write(arduino, flow_rate, "uint16");
-feedback = read(arduino,1,"uint16");
-disp("Flow rate set to " + feedback  + " SCCM");
+writeline(arduino, flow_rate);
+feedback = readline(arduino);
+disp(feedback);
 clear arduino;
 
 function waitForArduino(arduino)
