@@ -2,17 +2,14 @@
 // serial comms code builds on example from Robin2 on Arduino.cc forums
 
 #include <TimerOne.h>
-#define PWM_PIN 9 //can only use pin 9 or 10 for timer1 based PWM
+#define PWM_PIN 9 // can only use pin 9 or 10 for timer1 based PWM
 #define MFC_READOUT A0;
 
-const byte numInputChars = 5; //max input flow rate is 4 digits (range 0-1000) + new line character = 5
-char receivedSerialInput[numInputChars]; //array to store received input string
+// initialise global variables
+const byte numInputChars = 5; // max input flow rate is 4 digits (range 0-1000) + new line character = 5
+char receivedSerialInput[numInputChars]; // array to store received input string
 boolean newInputData = false;
-
 int serialFlowRate = 0;
-
-// unsigned int set_flow_rate = 500; // desired flow rate in SCCM
-// unsigned int serial_flow_rate;
 
 void setup() {
 Serial.begin(9600);
@@ -49,22 +46,23 @@ void loop() {
 //   }
 
 void readSerialInput(){
+  // initialise local variables
   static byte charIndex = 0;
-  char endMarker = '\n'; //terminator is new line
+  char endMarker = '\n'; // terminator set to "new line"
   char receivedChar;
 
   if (Serial.available() > 0) {
     receivedChar = Serial.read();
 
     if (receivedChar != endMarker){
-      receivedSerialInput[charIndex] = receivedChar;
+      receivedSerialInput[charIndex] = receivedChar; // add each byte (digit) to input character string
       charIndex++;
-      if (charIndex >=  numInputChars) { //resets index counter to prevent inputs larger than 5 bytes
+      if (charIndex >=  numInputChars) { // adjusts index counter to truncate inputs larger than 5 bytes
         charIndex = numInputChars - 1;
       }
     }
     else {
-      receivedSerialInput[charIndex] = '\0'; //terminate the string
+      receivedSerialInput[charIndex] = '\0'; // terminate the string when end marker received
       charIndex = 0;
       newInputData = true;
     }
@@ -73,8 +71,8 @@ void readSerialInput(){
 
 void showSerialInput() {
     if (newInputData == true) {
-        serialFlowRate= 0;             // new for this version
-        serialFlowRate = atoi(receivedSerialInput);   // new for this version
+        serialFlowRate= 0;            
+        serialFlowRate = atoi(receivedSerialInput); // convert character input to integer format
         Serial.print("Input Flow Rate: ");
         Serial.println(serialFlowRate);
         newInputData = false;
@@ -82,7 +80,7 @@ void showSerialInput() {
 }
 
 void setFlowRate(){
-  float dutyCycle = serialFlowRate * 1.023;
-  unsigned int dutyCycleInt = round(dutyCycle);
-  Timer1.pwm(PWM_PIN,dutyCycleInt);
+  float dutyCycle = serialFlowRate * 1.023; // convert input flow rate to duty cycle value for PWM
+  unsigned int dutyCycleInt = round(dutyCycle); // round result to nearest integer
+  Timer1.pwm(PWM_PIN,dutyCycleInt); 
 }
