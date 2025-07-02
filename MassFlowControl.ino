@@ -14,6 +14,7 @@ boolean newInputData = false;
 int serialFlowRate = 0;
 boolean flowRateFlag = false;
 int terminateCommand = 1001;
+boolean stopFlag = false;
 
 void setup() {
 Serial.begin(9600);
@@ -31,10 +32,10 @@ Serial.println("<Arduino is ready>");
 
 void loop() {
   readSerialInput();
-  // checkSerialInput();
   showSerialInput();
   readFlowRate();
-}
+  }
+
 
 void readSerialInput(){
   // initialise local variables
@@ -56,7 +57,6 @@ void readSerialInput(){
       receivedSerialInput[charIndex] = '\0'; // terminate the string when end marker received
       charIndex = 0;
       newInputData = true;
-      flowRateFlag == false;
     }
   }
 }
@@ -65,11 +65,17 @@ void showSerialInput() {
     if (newInputData == true) {
         serialFlowRate= 0;            
         serialFlowRate = atoi(receivedSerialInput); // convert character input to integer format
+        if (serialFlowRate == 1001){
+          stopFlag = true;
+          digitalWrite(RELAY_1,LOW);
+        }
+        else{
         setFlowRate();
         digitalWrite(RELAY_1, HIGH);
         digitalWrite(RELAY_2,LOW);
         Serial.println(serialFlowRate); // for confirmation in MATLAB
-        newInputData = false;
+        newInputData = false; 
+        }
     }
 }
 
@@ -77,24 +83,21 @@ void setFlowRate(){
   float dutyCycle = serialFlowRate * 1.023; // convert input flow rate to duty cycle value for PWM
   unsigned int dutyCycleInt = round(dutyCycle); // round result to nearest integer
   Timer1.pwm(PWM_PIN,dutyCycleInt); 
-  flowRateFlag = true; // flag that flow rate has been set
+   flowRateFlag = true; // flag that flow rate has been set. 
 }
 
 void readFlowRate(){
-    while (flowRateFlag == true) { // only write to serial if the flow rate has been received (blocks write until read executed)
+    if (newInputData == false && flowRateFlag == true && stopFlag == false) { // only write to serial under set conditions (no new serial input, already sent confirmation of flow rate, not received stop command)
         int flowVoltageRead = analogRead(MFC_READOUT);
         float measuredFlowRate = flowVoltageRead * 200;
         int measuredFlowRateInt = round(measuredFlowRate); // round to nearest integer flow rate
-        // Serial.print("Measured Flow Rate: ");
+
         // check there is enough buffer space available to write to serial
         int bytesAvailable = Serial.availableForWrite();
         if (bytesAvailable > 5) { // max of 4 digits for flow rate (1000 SCCM)
           Serial.print(measuredFlowRateInt);
           Serial.println();
-          delay(500);
-        }
-        if (newInputData == true) {
-          break;
+          delay(100);
         }
       }
   }
