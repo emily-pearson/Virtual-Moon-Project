@@ -4,6 +4,8 @@
 #include <TimerOne.h>
 #define PWM_PIN 9 // can only use pin 9 or 10 for timer1 based PWM
 #define MFC_READOUT A0
+#define RELAY_1 4
+#define RELAY_2 7
 
 // initialise global variables
 const byte numInputChars = 5; // max input flow rate is 4 digits (range 0-1000) + new line character = 5
@@ -11,10 +13,16 @@ char receivedSerialInput[numInputChars]; // array to store received input string
 boolean newInputData = false;
 int serialFlowRate = 0;
 boolean flowRateFlag = false;
+int terminateCommand = 1001;
 
 void setup() {
 Serial.begin(9600);
+
+// set digital pins to output mode
 pinMode(PWM_PIN,OUTPUT); 
+pinMode(RELAY_1,OUTPUT);
+pinMode(RELAY_2,OUTPUT);
+// set PWM frequency
 Timer1.initialize(100); //100us = 10kHz (10x the MFC sampling rate)
 
 // tell MATLAB that Arduino is ready to communicate
@@ -22,12 +30,11 @@ Serial.println("<Arduino is ready>");
 }
 
 void loop() {
-  // read flow rate from MATLAB
   readSerialInput();
+  // checkSerialInput();
   showSerialInput();
   readFlowRate();
 }
-
 
 void readSerialInput(){
   // initialise local variables
@@ -59,7 +66,9 @@ void showSerialInput() {
         serialFlowRate= 0;            
         serialFlowRate = atoi(receivedSerialInput); // convert character input to integer format
         setFlowRate();
-        Serial.println(serialFlowRate);
+        digitalWrite(RELAY_1, HIGH);
+        digitalWrite(RELAY_2,LOW);
+        Serial.println(serialFlowRate); // for confirmation in MATLAB
         newInputData = false;
     }
 }
