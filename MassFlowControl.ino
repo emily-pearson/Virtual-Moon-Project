@@ -68,6 +68,8 @@ void showSerialInput() {
         if (serialFlowRate == 1001){
           stopFlag = true;
           digitalWrite(RELAY_1,LOW);
+          delay(2000);
+          digitalWrite(RELAY_2,HIGH);
         }
         else{
         setFlowRate();
@@ -101,3 +103,4 @@ void readFlowRate(){
         }
       }
   }
+
