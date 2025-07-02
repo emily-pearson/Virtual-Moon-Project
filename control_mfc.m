@@ -15,23 +15,25 @@ flush(arduino);
 readiness_check = waitForArduino(arduino);
 
 % ask user to input flow rate and then send over serial
-confirmed_flow_rate = setFlowRate(arduino);
+flow_rate = inputFlowRate();
+confirmed_flow_rate = setFlowRate(arduino, flow_rate);
 disp("Flow rate set to " + confirmed_flow_rate + " SCCM");
 
 % Set up UserData to store arduino data
 arduino.UserData = struct("FlowData",[],"Count",1);
 
 % Configure callback to execute function when a new reading is available
-maxReadings = 50;
+maxReadings = 100;
 configureCallback(arduino,"terminator", @(src, event) readSerialData(src,event,maxReadings));
-
-% test code for enabling multiple flow rates to be set in one execution
-% updated_flow_rate = setFlowRate(arduino);
-% disp("Flow rate set to " + updated_flow_rate + " SCCM");
 
 % force MATLAB to wait until all data has been collected over serial
 while arduino.UserData.Count <= maxReadings
     pause(0.1);
+    if arduino.UserData.Count == maxReadings
+        writeline(arduino,'1001');
+        disp("stopped");
+    end
+
 end
 
 % extract data from arduino object
@@ -62,8 +64,7 @@ else
 end
 end
 
-function [confirmed_flow_rate] = setFlowRate(arduino)
-flow_rate = inputFlowRate();
+function [confirmed_flow_rate] = setFlowRate(arduino, flow_rate)
 writeline(arduino, flow_rate);
 start_time = tic;
 flow_rate_string = convertCharsToStrings(flow_rate);
