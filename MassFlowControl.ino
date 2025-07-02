@@ -3,13 +3,14 @@
 
 #include <TimerOne.h>
 #define PWM_PIN 9 // can only use pin 9 or 10 for timer1 based PWM
-#define MFC_READOUT A0;
+#define MFC_READOUT A0
 
 // initialise global variables
 const byte numInputChars = 5; // max input flow rate is 4 digits (range 0-1000) + new line character = 5
 char receivedSerialInput[numInputChars]; // array to store received input string
 boolean newInputData = false;
 int serialFlowRate = 0;
+boolean flowRateFlag = false;
 
 void setup() {
 Serial.begin(9600);
@@ -24,26 +25,9 @@ void loop() {
   // read flow rate from MATLAB
   readSerialInput();
   showSerialInput();
-  setFlowRate();
-
+  readFlowRate();
 }
 
-// read back voltage from analog out and transform into a flow rate
-// int MFC_voltage_read = analogRead(MFC_READOUT);
-// float measured_flow_rate = MFC_voltage_read * 200;
-// measured_flow_rate = round(measured_flow_rate) // round up to nearest integer flow rate
-
-// // check there is enough buffer space available to write to serial
-//   int bytesAvailable = Serial.availableForWrite();
-//   if (bytesAvailable > 5) { // max of 4 digits for flow rate (1000 SCCM)
-
-// // send measured flow rate to MATLAB over serial
-// Serial.print(measured_flow_rate);
-// Serial.println();
-// delay(50);
-
-// // eventually will also send thermocouple data to MATLAB over serial 
-//   }
 
 void readSerialInput(){
   // initialise local variables
@@ -65,6 +49,7 @@ void readSerialInput(){
       receivedSerialInput[charIndex] = '\0'; // terminate the string when end marker received
       charIndex = 0;
       newInputData = true;
+      flowRateFlag == false;
     }
   }
 }
@@ -73,7 +58,7 @@ void showSerialInput() {
     if (newInputData == true) {
         serialFlowRate= 0;            
         serialFlowRate = atoi(receivedSerialInput); // convert character input to integer format
-        Serial.print("Input Flow Rate: ");
+        setFlowRate();
         Serial.println(serialFlowRate);
         newInputData = false;
     }
@@ -83,4 +68,24 @@ void setFlowRate(){
   float dutyCycle = serialFlowRate * 1.023; // convert input flow rate to duty cycle value for PWM
   unsigned int dutyCycleInt = round(dutyCycle); // round result to nearest integer
   Timer1.pwm(PWM_PIN,dutyCycleInt); 
+  flowRateFlag = true; // flag that flow rate has been set
 }
+
+void readFlowRate(){
+    while (flowRateFlag == true) { // only write to serial if the flow rate has been received (blocks write until read executed)
+        int flowVoltageRead = analogRead(MFC_READOUT);
+        float measuredFlowRate = flowVoltageRead * 200;
+        int measuredFlowRateInt = round(measuredFlowRate); // round to nearest integer flow rate
+        // Serial.print("Measured Flow Rate: ");
+        // check there is enough buffer space available to write to serial
+        int bytesAvailable = Serial.availableForWrite();
+        if (bytesAvailable > 5) { // max of 4 digits for flow rate (1000 SCCM)
+          Serial.print(measuredFlowRateInt);
+          Serial.println();
+          delay(500);
+        }
+        if (newInputData == true) {
+          break;
+        }
+      }
+  }
