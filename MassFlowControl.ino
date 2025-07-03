@@ -15,6 +15,9 @@ int serialFlowRate = 0;
 boolean flowRateFlag = false;
 int terminateCommand = 1001;
 boolean stopFlag = false;
+unsigned long startMillis;
+unsigned long currentMillis;
+boolean printFlag = false;
 
 void setup() {
 Serial.begin(9600);
@@ -62,13 +65,13 @@ void readSerialInput(){
 }
 
 void showSerialInput() {
-    if (newInputData == true) {
+    if (newInputData == true) { 
         serialFlowRate= 0;            
         serialFlowRate = atoi(receivedSerialInput); // convert character input to integer format
-        if (serialFlowRate == 1001){
+        if (serialFlowRate == 1001){ 
           stopFlag = true;
           digitalWrite(RELAY_1,LOW);
-          delay(2000);
+          delay(2000); // WARNING delay is a blocking function and will potentially need to be replaced with millis() later in order to record temperature data during this period
           digitalWrite(RELAY_2,HIGH);
         }
         else{
@@ -96,10 +99,18 @@ void readFlowRate(){
 
         // check there is enough buffer space available to write to serial
         int bytesAvailable = Serial.availableForWrite();
-        if (bytesAvailable > 5) { // max of 4 digits for flow rate (1000 SCCM)
+        if ((bytesAvailable > 5) && (printFlag == false)){ // max of 4 digits for flow rate (1000 SCCM)
           Serial.print(measuredFlowRateInt);
           Serial.println();
-          delay(100);
+          printFlag = true;
+          startMillis = millis();
+        }
+        if (printFlag == true) {
+          // wait 100 ms
+          currentMillis = millis();
+          if (currentMillis - startMillis >= 100){
+            printFlag = false;
+          }
         }
       }
   }
