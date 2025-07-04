@@ -38,7 +38,7 @@ Serial.println("<Arduino is ready>");
 void loop() {
   readSerialInput();
   showSerialInput();
-  readFlowRate();
+  readData();
   }
 
 
@@ -90,22 +90,35 @@ void showSerialInput() {
 }
 
 void setFlowRate(){
-  float dutyCycle = serialFlowRate * 1.023; // convert input flow rate to duty cycle value for PWM
+  int adjustedFlowRate = serialFlowRate + 5; //adjust for error correction (error between chosen setpoint and that displayed on the MFC screen)
+  float dutyCycle = adjustedFlowRate * 1.023; // convert input flow rate to duty cycle value for PWM
   unsigned int dutyCycleInt = round(dutyCycle); // round result to nearest integer 
   Timer1.pwm(PWM_PIN,dutyCycleInt); 
    flowRateFlag = true; // flag that flow rate has been set. 
 }
 
-void readFlowRate(){
+void readData(){
     if (newInputData == false && flowRateFlag == true && stopFlag == false) { // only write to serial under set conditions (no new serial input, already sent confirmation of flow rate, not received stop command)
-        int flowVoltageRead = analogRead(MFC_READOUT);
+        
+        // read flow rate
+        int flowADC = analogRead(MFC_READOUT);
+        float flowVoltageRead = flowADC * (5.06/1023); //5.06V measured off Arduino with multimeter
         float measuredFlowRate = flowVoltageRead * 200;
         int measuredFlowRateInt = round(measuredFlowRate); // round to nearest integer flow rate
+
+        // read temperature 
+        int thermoADC = analogRead(TC_READOUT);
+        float thermoVoltage = thermoADC * (5.06/1023); //5.06V measured off Arduino with multimeter
+        float temperature = (thermoVoltage - 1.25)/0.005;
 
         // check there is enough buffer space available to write to serial
         int bytesAvailable = Serial.availableForWrite();
         if ((bytesAvailable > 5) && (printFlag == false)){ // max of 4 digits for flow rate (1000 SCCM)
+
+          // send values over serial using a comma-separated string
           Serial.print(measuredFlowRateInt);
+          Serial.print(',');
+          Serial.print(temperature);
           Serial.println();
           printFlag = true;
           startMillis = millis();
@@ -116,3 +129,7 @@ void readFlowRate(){
           if (currentMillis - startMillis >= 100){ // check is 100ms has elapsed
             printFlag = false; // allow values to be sent over serial again
           }
+        }
+      }
+  }
+
