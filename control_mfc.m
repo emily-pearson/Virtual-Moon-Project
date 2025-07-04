@@ -20,25 +20,25 @@ confirmed_flow_rate = setFlowRate(arduino, flow_rate);
 disp("Flow rate set to " + confirmed_flow_rate + " SCCM");
 
 % Set up UserData to store arduino data
-arduino.UserData = struct("FlowData",[],"Count",1);
+arduino.UserData = struct("FlowData",[],"TempData",[],"Count",1);
 
 % Configure callback to execute function when a new reading is available
-maxReadings = 250;
+maxReadings = 100;
 configureCallback(arduino,"terminator", @(src, event) readSerialData(src,event,maxReadings));
 
 % force MATLAB to wait until all data has been collected over serial
 while arduino.UserData.Count <= maxReadings
-    pause(0.1); % don't change this or code doesn't like it (stop function won't call)
+    pause(0.1); % don't change this value or code doesn't like it (stop message may not be sent)
     if arduino.UserData.Count == maxReadings
         pause(0.1); % this needs to stay here even though it looks like a duplicate!
         writeline(arduino,'1001'); % 1001 cannot be entered as a flow rate as it throws error, so this is safe to use to stop Arduino
-        disp("stopped");
+        disp("<finished>");
     end
-
 end
 
 % extract data from arduino object
 flowData = arduino.UserData.FlowData;
+tempData = arduino.UserData.TempData;
 
 %clear arduino object to free up serial port
 clear arduino;
