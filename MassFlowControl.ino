@@ -4,19 +4,21 @@
 #include <TimerOne.h>
 #define PWM_PIN 9 // can only use pin 9 or 10 for timer1 based PWM
 #define MFC_READOUT A0
-#define RELAY_1 4
+#define TC_READOUT A5
+#define RELAY_1 4 // NB: relay pins are set by board architecture and cannot be changed
 #define RELAY_2 7
 
 // initialise global variables
 const byte numInputChars = 5; // max input flow rate is 4 digits (range 0-1000) + new line character = 5
 char receivedSerialInput[numInputChars]; // array to store received input string
-boolean newInputData = false;
 int serialFlowRate = 0;
-boolean flowRateFlag = false;
-int terminateCommand = 1001;
-boolean stopFlag = false;
 unsigned long startMillis;
 unsigned long currentMillis;
+
+// initialise boolean flags
+boolean newInputData = false;
+boolean flowRateFlag = false;
+boolean stopFlag = false;
 boolean printFlag = false;
 
 void setup() {
@@ -59,21 +61,24 @@ void readSerialInput(){
     else {
       receivedSerialInput[charIndex] = '\0'; // terminate the string when end marker received
       charIndex = 0;
-      newInputData = true;
+      newInputData = true; 
     }
   }
 }
 
 void showSerialInput() {
     if (newInputData == true) { 
-        serialFlowRate= 0;            
+        serialFlowRate = 0;            
         serialFlowRate = atoi(receivedSerialInput); // convert character input to integer format
-        if (serialFlowRate == 1001){ 
+        
+        // stop transmission if terminate command (integer 1001) is sent from MATLAB. Turn off S1, wait 2 seconds, then turn on S2
+        if (serialFlowRate == 1001){ // 
           stopFlag = true;
-          digitalWrite(RELAY_1,LOW);
+          digitalWrite(RELAY_1,LOW); 
           delay(2000); // WARNING delay is a blocking function and will potentially need to be replaced with millis() later in order to record temperature data during this period
-          digitalWrite(RELAY_2,HIGH);
+          digitalWrite(RELAY_2,HIGH); 
         }
+        // otherwise set the flow rate to the value requested. Turn on S1 and turn off S2
         else{
         setFlowRate();
         digitalWrite(RELAY_1, HIGH);
@@ -86,7 +91,7 @@ void showSerialInput() {
 
 void setFlowRate(){
   float dutyCycle = serialFlowRate * 1.023; // convert input flow rate to duty cycle value for PWM
-  unsigned int dutyCycleInt = round(dutyCycle); // round result to nearest integer
+  unsigned int dutyCycleInt = round(dutyCycle); // round result to nearest integer 
   Timer1.pwm(PWM_PIN,dutyCycleInt); 
    flowRateFlag = true; // flag that flow rate has been set. 
 }
@@ -105,13 +110,9 @@ void readFlowRate(){
           printFlag = true;
           startMillis = millis();
         }
+        // if a value has been sent over serial, wait 100ms before sending the next one
         if (printFlag == true) {
-          // wait 100 ms
           currentMillis = millis();
-          if (currentMillis - startMillis >= 100){
-            printFlag = false;
+          if (currentMillis - startMillis >= 100){ // check is 100ms has elapsed
+            printFlag = false; // allow values to be sent over serial again
           }
-        }
-      }
-  }
-
