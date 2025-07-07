@@ -12,18 +12,18 @@ configureTerminator(arduino,10);
 flush(arduino);
 
 % wait for Arduino to be ready to send/receive data
-readiness_check = waitForArduino(arduino);
+readinessCheck = waitForArduino(arduino);
 
 % ask user to input flow rate and then send over serial
-flow_rate = inputFlowRate();
-confirmed_flow_rate = setFlowRate(arduino, flow_rate);
-disp("Flow rate set to " + confirmed_flow_rate + " SCCM");
+flowRate = inputFlowRate();
+confirmedFlowRate = setFlowRate(arduino, flowRate);
+disp("Flow rate set to " + confirmedFlowRate + " SCCM");
 
 % Set up UserData to store arduino data
-arduino.UserData = struct("FlowData",[],"TempData",[],"Count",1);
+arduino.UserData = struct("FlowData",[],"TempData",[],"TimeData",[],"Count",1);
 
 % Configure callback to execute function when a new reading is available
-maxReadings = 100;
+maxReadings = 50;
 configureCallback(arduino,"terminator", @(src, event) readSerialData(src,event,maxReadings));
 
 % force MATLAB to wait until all data has been collected over serial
@@ -39,44 +39,73 @@ end
 % extract data from arduino object
 flowData = arduino.UserData.FlowData;
 tempData = arduino.UserData.TempData;
+timeData = arduino.UserData.TimeData;
+
+% plot graphs of flow rate and temperature
+flowRatePlot = plotFlowRate(flowData,timeData);
+tempPlot = plotTemp(tempData,timeData);
 
 %clear arduino object to free up serial port
 clear arduino;
 
-function [readiness_check] = waitForArduino(arduino)
+function [readinessCheck] = waitForArduino(arduino)
 configureTerminator(arduino,"CR/LF");
-actual_response = readline(arduino);
-expected_response = "<Arduino is ready>";
+actualResponse = readline(arduino);
+expectedResponse = "<Arduino is ready>";
 % wait until ready message has been received from Arduino
-while strcmp(actual_response,expected_response) == 0
+while strcmp(actualResponse,expectedResponse) == 0
     pause(0.1);
 end
-readiness_check = actual_response;
-disp(readiness_check);
+readinessCheck = actualResponse;
+disp(readinessCheck);
 end
 
-function [flow_rate] = inputFlowRate
+function [flowRate] = inputFlowRate
 prompt = "Enter flow rate (SCCM): ";
 answer = input(prompt);
 if answer < 0 || answer > 1000
     error("Flow rate must be between 0 and 1000");
 else
-    flow_rate = num2str(answer);
+    flowRate = num2str(answer);
 end
 end
 
-function [confirmed_flow_rate] = setFlowRate(arduino, flow_rate)
-writeline(arduino, flow_rate);
-start_time = tic;
-flow_rate_string = convertCharsToStrings(flow_rate);
+function [confirmedFlowRate] = setFlowRate(arduino, flowRate)
+writeline(arduino, flowRate);
+startTime = tic;
+flowRateString = convertCharsToStrings(flowRate);
 feedback = readline(arduino);
-while strcmp(flow_rate_string, feedback) == 0
+while strcmp(flowRateString, feedback) == 0
     pause(0.1);
-    end_time = toc(start_time);
+    endTime = toc(startTime);
     % throw error if correct flow rate confirmation not received within 5 secs
-    if end_time > 5
+    if endTime > 5
         error("Timed out"); 
     end
 end
-confirmed_flow_rate = feedback;
+confirmedFlowRate = feedback;
+end
+
+function [flowRatePlot] = plotFlowRate(flowData,timeData)
+flowRatePlot = figure;
+timeArray = zeros(1,length(timeData));
+for i = 1:1:length(timeArray)
+    timeArray(:,i) = (timeData(i) - timeData(1))/1000;
+    plot(timeArray,flowData);
+    xlabel("Time(s)");
+    ylabel("Flow Rate (SCCM)");
+    title("Flow Rate During Experiment");
+end
+end
+
+function [tempPlot] = plotTemp(tempData,timeData)
+tempPlot = figure;
+timeArray = zeros(1,length(timeData));
+for i = 1:1:length(timeArray)
+    timeArray(:,i) = (timeData(i) - timeData(1))/1000;
+    plot(timeArray,tempData);
+    xlabel("Time(s)");
+    ylabel("Temperature (C))");
+    title("Temperature During Experiment");
+end
 end
