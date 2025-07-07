@@ -1,11 +1,12 @@
 // requires Uno R3 as TimerOne library is not supported on Uno R4 architecture
 // serial comms code builds on example from Robin2 on Arduino.cc forums
+// millis code builds on example from UKHelibob on Arduino.cc forums
 
 #include <TimerOne.h>
-#define PWM_PIN 9 // can only use pin 9 or 10 for timer1 based PWM
+#define PWM_PIN 9 // NB: only pins 9 or 10 are available for TimerOne-based PWM
 #define MFC_READOUT A0
 #define TC_READOUT A5
-#define RELAY_1 4 // NB: relay pins are set by board architecture and cannot be changed
+#define RELAY_1 4 // NB: relay pins are set by board architecture and thus cannot be changed
 #define RELAY_2 7
 
 // initialise global variables
@@ -14,6 +15,8 @@ char receivedSerialInput[numInputChars]; // array to store received input string
 int serialFlowRate = 0;
 unsigned long startMillis;
 unsigned long currentMillis;
+unsigned long terminateStartMillis;
+unsigned long terminateCurrentMillis;
 
 // initialise boolean flags
 boolean newInputData = false;
@@ -68,24 +71,35 @@ void readSerialInput(){
 
 void showSerialInput() {
     if (newInputData == true) { 
-        serialFlowRate = 0;            
-        serialFlowRate = atoi(receivedSerialInput); // convert character input to integer format
-        
-        // stop transmission if terminate command (integer 1001) is sent from MATLAB. Turn off S1, wait 2 seconds, then turn on S2
-        if (serialFlowRate == 1001){ // 
-          stopFlag = true;
-          digitalWrite(RELAY_1,LOW); 
-          delay(2000); // WARNING delay is a blocking function and will potentially need to be replaced with millis() later in order to record temperature data during this period
-          digitalWrite(RELAY_2,HIGH); 
-        }
-        // otherwise set the flow rate to the value requested. Turn on S1 and turn off S2
-        else{
+      serialFlowRate = 0;            
+      serialFlowRate = atoi(receivedSerialInput); // convert character input to integer format
+
+      // if data received is NOT the terminate command (integer 1001), set flow rate to the value requested. Turn on S1 and ensure S2 is off.
+      if (serialFlowRate != 1001){
         setFlowRate();
         digitalWrite(RELAY_1, HIGH);
         digitalWrite(RELAY_2,LOW);
         Serial.println(serialFlowRate); // for confirmation in MATLAB
         newInputData = false; 
-        }
+      }
+
+      // stop transmission if terminate command (integer 1001) is sent from MATLAB. Turn off S1, wait 2 seconds, then turn on S2
+      else { 
+          if (stopFlag == false){ // ensures this code only runs once (prevents terminateStartMillis from being overwritten each cycle of loop())
+          stopFlag = true;
+          digitalWrite(RELAY_1,LOW); 
+          terminateStartMillis = millis();
+          }
+          if (stopFlag == true){
+            terminateCurrentMillis = millis();
+            if (terminateCurrentMillis - terminateStartMillis >= 2000){ // acts like a delay(2000) but is non-blocking, so e.g. temperature could be still recorded during the warmup phase
+              digitalWrite(RELAY_2,HIGH); 
+              stopFlag = false;
+              newInputData = false;
+            }
+          }
+      }
+
     }
 }
 
@@ -113,12 +127,14 @@ void readData(){
 
         // check there is enough buffer space available to write to serial
         int bytesAvailable = Serial.availableForWrite();
-        if ((bytesAvailable > 5) && (printFlag == false)){ // max of 4 digits for flow rate (1000 SCCM)
+        if ((bytesAvailable > 22) && (printFlag == false)){ // max of 21 digits for data package (eg. "1000,24.43,4294967295")
 
           // send values over serial using a comma-separated string
           Serial.print(measuredFlowRateInt);
           Serial.print(',');
           Serial.print(temperature);
+          Serial.print(',');
+          Serial.print(millis()); // to be used for time calculation in MATLAB
           Serial.println();
           printFlag = true;
           startMillis = millis();
@@ -132,4 +148,5 @@ void readData(){
         }
       }
   }
+
 
