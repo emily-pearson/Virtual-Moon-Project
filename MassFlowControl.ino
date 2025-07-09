@@ -34,8 +34,14 @@ pinMode(RELAY_2,OUTPUT);
 // set PWM frequency
 Timer1.initialize(100); //100us = 10kHz (10x the MFC sampling rate)
 
+// flush dry nitrogen through the system - currently blinks the relay once before it comes on properly?
+// digitalWrite(RELAY_1,LOW);
+// digitalWrite(RELAY_2,HIGH);
+// delay(20000);
+
 // tell MATLAB that Arduino is ready to communicate
 Serial.println("<Arduino is ready>");
+// digitalWrite(RELAY_2,LOW);
 }
 
 void loop() {
@@ -116,13 +122,13 @@ void readData(){
         
         // read flow rate
         int flowADC = analogRead(MFC_READOUT);
-        float flowVoltageRead = flowADC * (5.06/1023); //5.06V measured off Arduino with multimeter
+        float flowVoltageRead = flowADC * (5/1023); // change to 5.06V??
         float measuredFlowRate = flowVoltageRead * 200;
         int measuredFlowRateInt = round(measuredFlowRate); // round to nearest integer flow rate
 
         // read temperature 
         int thermoADC = analogRead(TC_READOUT);
-        float thermoVoltage = thermoADC * (5.06/1023); //5.06V measured off Arduino with multimeter
+        float thermoVoltage = thermoADC * (5.06/1023); // numerator dependent on Arduino power cable length. Long cable - measured 5.02V but use 5.06V as error corrector. Short cable - measured 5.06V, use 5.12V as error corrector
         float temperature = (thermoVoltage - 1.25)/0.005;
 
         // check there is enough buffer space available to write to serial
@@ -148,5 +154,6 @@ void readData(){
         }
       }
   }
+
 
 
