@@ -23,7 +23,7 @@ disp("Flow rate set to " + confirmedFlowRate + " SCCM");
 arduino.UserData = struct("FlowData",[],"TempData",[],"TimeData",[],"Count",1);
 
 % Configure callback to execute function when a new reading is available
-maxReadings = 50;
+maxReadings = 1000;
 configureCallback(arduino,"terminator", @(src, event) readSerialData(src,event,maxReadings));
 
 % force MATLAB to wait until all data has been collected over serial
@@ -40,6 +40,16 @@ end
 flowData = arduino.UserData.FlowData;
 tempData = arduino.UserData.TempData;
 timeData = arduino.UserData.TimeData;
+
+% reshape data into column vectors and store in an excel spreadsheet
+flowDataVector = reshape(flowData,[maxReadings,1]);
+tempDataVector = reshape(tempData,[maxReadings,1]);
+timeDataVector = reshape(timeData,[maxReadings,1];
+
+resultsFile = 'Results_X_SCCM.xlsx';
+writematrix(flowDataVector,resultsFile,'Sheet',1,'Range','A1');
+writematrix(tempDataVector,resultsFile,'Sheet',1,'Range','B1');
+writematrix(timeDataVector,resultsFile,'Sheet',1,'Range','C1');
 
 % plot graphs of flow rate and temperature
 flowRatePlot = plotFlowRate(flowData,timeData);
