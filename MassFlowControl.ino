@@ -34,14 +34,14 @@ pinMode(RELAY_2,OUTPUT);
 // set PWM frequency
 Timer1.initialize(100); //100us = 10kHz (10x the MFC sampling rate)
 
-// flush dry nitrogen through the system - currently blinks the relay once before it comes on properly?
-// digitalWrite(RELAY_1,LOW);
-// digitalWrite(RELAY_2,HIGH);
-// delay(20000);
+// flush dry nitrogen through the system for 20 sec - currently blinks the relay once before it comes on properly?
+digitalWrite(RELAY_1,LOW);
+digitalWrite(RELAY_2,HIGH);
+delay(10000);
+digitalWrite(RELAY_2,LOW);
 
 // tell MATLAB that Arduino is ready to communicate
 Serial.println("<Arduino is ready>");
-// digitalWrite(RELAY_2,LOW);
 }
 
 void loop() {
@@ -99,7 +99,7 @@ void showSerialInput() {
           if (stopFlag == true){
             terminateCurrentMillis = millis();
             if (terminateCurrentMillis - terminateStartMillis >= 2000){ // acts like a delay(2000) but is non-blocking, so e.g. temperature could be still recorded during the warmup phase
-              digitalWrite(RELAY_2,HIGH); 
+              digitalWrite(RELAY_2,LOW); // will be HIGH once LN2 is used
               stopFlag = false;
               newInputData = false;
             }
@@ -110,7 +110,7 @@ void showSerialInput() {
 }
 
 void setFlowRate(){
-  int adjustedFlowRate = serialFlowRate + 5; //adjust for error correction (error between chosen setpoint and that displayed on the MFC screen)
+  int adjustedFlowRate = serialFlowRate + 5; //adjust +5 for error correction (error between chosen setpoint and that displayed on the MFC screen)
   float dutyCycle = adjustedFlowRate * 1.023; // convert input flow rate to duty cycle value for PWM
   unsigned int dutyCycleInt = round(dutyCycle); // round result to nearest integer 
   Timer1.pwm(PWM_PIN,dutyCycleInt); 
@@ -122,13 +122,13 @@ void readData(){
         
         // read flow rate
         int flowADC = analogRead(MFC_READOUT);
-        float flowVoltageRead = flowADC * (5/1023); // change to 5.06V??
+        float flowVoltageRead = flowADC * (5.0/1023); // change to 5.06V??
         float measuredFlowRate = flowVoltageRead * 200;
         int measuredFlowRateInt = round(measuredFlowRate); // round to nearest integer flow rate
 
         // read temperature 
         int thermoADC = analogRead(TC_READOUT);
-        float thermoVoltage = thermoADC * (5.06/1023); // numerator dependent on Arduino power cable length. Long cable - measured 5.02V but use 5.06V as error corrector. Short cable - measured 5.06V, use 5.12V as error corrector
+        float thermoVoltage = thermoADC * (5.06/1023); // numerator dependent on Arduino power cable length. Long cable - measured 5.02V but use 5.06V to error correct. Short cable - measured 5.06V, use 5.12V as error corrector
         float temperature = (thermoVoltage - 1.25)/0.005;
 
         // check there is enough buffer space available to write to serial
@@ -154,6 +154,4 @@ void readData(){
         }
       }
   }
-
-
 
