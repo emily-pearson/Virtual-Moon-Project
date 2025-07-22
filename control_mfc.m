@@ -32,12 +32,20 @@ flowRate = inputFlowRate();
 confirmedFlowRate = setFlowRate(arduino, flowRate);
 disp("Flow rate set to " + confirmedFlowRate + " SCCM");
 
-% Set up UserData to store arduino data
-arduino.UserData = struct("FlowData",[],"TempData",[],"TimeData",[],"Count",1);
+% Set up UserData to store arduino data and define max readings requested
+arduino.UserData = struct("FlowData",[],"TempData",[],"AvgTempData",[],"TimeData",[],"Count",1);
+maxReadings = 600;
+
+% set up live plot
+livePlot = animatedline;
+xlabel("Time(s)");
+ylabel("Temperature (C))");
+maxX = maxReadings/10; % takes 10 readings per second
+xlim([0 maxX]);
+title("Live Temperature Plot");
 
 % Configure callback to execute function when a new reading is available
-maxReadings = 72000;
-configureCallback(arduino,"terminator", @(src, event) readSerialData(src,event,maxReadings));
+configureCallback(arduino,"terminator", @(src, event) readSerialData(src,event,maxReadings,livePlot));
 
 % force MATLAB to wait until all data has been collected over serial
 while arduino.UserData.Count <= maxReadings
@@ -52,6 +60,7 @@ end
 % extract data from arduino object
 flowData = arduino.UserData.FlowData;
 tempData = arduino.UserData.TempData;
+avgTempData = arduino.UserData.AvgTempData;
 timeData = arduino.UserData.TimeData;
 
 % process time data to reference from 0 and convert from ms to s
@@ -60,12 +69,14 @@ adjustedTimeData = processTimeData(timeData);
 % reshape data into column vectors and store in an excel spreadsheet
 flowDataVector = reshape(flowData,[maxReadings,1]);
 tempDataVector = reshape(tempData,[maxReadings,1]);
+avgTempDataVector = reshape(avgTempData,[maxReadings,1]);
 timeDataVector = reshape(adjustedTimeData,[maxReadings,1]);
 
-resultsFile = 'Retesting_16.07.xlsx';
+resultsFile = 'Throwaway.xlsx';
 writematrix(flowDataVector,resultsFile,'Sheet',1,'Range','A1');
 writematrix(tempDataVector,resultsFile,'Sheet',1,'Range','B1');
-writematrix(timeDataVector,resultsFile,'Sheet',1,'Range','C1');
+writematrix(avgTempDataVector,resultsFile,'Sheet',1,'Range','C1');
+writematrix(timeDataVector,resultsFile,'Sheet',1,'Range','D1');
 
 % plot graphs of flow rate and temperature
 flowRatePlot = plotFlowRate(flowData,adjustedTimeData);
@@ -119,7 +130,7 @@ confirmedFlowRate = feedback;
 end
 
 function [flowRatePlot] = plotFlowRate(flowData,timeData)
-flowRatePlot = figure;
+flowRatePlot = figure(2);
 plot(timeData,flowData);
 xlabel("Time(s)");
 ylabel("Flow Rate (SCCM)");
@@ -128,7 +139,7 @@ title("Flow Rate During Experiment");
 end
 
 function [tempPlot] = plotTemp(tempData,timeData)
-tempPlot = figure;
+tempPlot = figure(3);
 plot(timeData,tempData);
 xlabel("Time(s)");
 ylabel("Temperature (C))");
