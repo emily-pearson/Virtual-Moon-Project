@@ -11,8 +11,8 @@ ARDUINO codes:
 - the PURGE_BYPASS code can be used as a simple code to turn on gas flow in the bypass gas feed line
 Together, the purge codes can be used as simple controls for the Royce end station (using the main code on the Royce is not currently possible as the thermocouple there is N-type)
 
-In addition, all raw data Excel files for the 11 tests described in the documentation are uploaded for reference
-Figures and images used in the documentation are also uploaded (figures are in the file formats .png or .tif)
-A powerpoint presentation given at the end of the summer internship is included
+In addition, all raw data Excel files for the 11 tests described in the documentation are uploaded for reference.
+Figures and images used in the documentation are also uploaded (figures are in the file formats .png or .tif).
+A powerpoint presentation given at the end of the summer internship is included.
 
 An extensive written report containing all findings and recommendations is included. This should be referred to as needed before continuing work on this project. 
