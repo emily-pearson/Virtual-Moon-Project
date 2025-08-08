@@ -16,3 +16,5 @@ Figures and images used in the documentation are also uploaded (figures are in t
 A powerpoint presentation given at the end of the summer internship is also included.
 
 An extensive written report containing all findings and recommendations is included. This should be referred to as needed before continuing work on this project. 
+
+- Emily Pearson, 08/08/2025
