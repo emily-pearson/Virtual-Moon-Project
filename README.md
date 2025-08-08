@@ -17,4 +17,4 @@ A powerpoint presentation given at the end of the summer internship is also incl
 
 An extensive written report containing all findings and recommendations is included. This should be referred to as needed before continuing work on this project. 
 
-Emily Pearson, 08/08/2025
+Code and documentation written by: Emily Pearson, 08/08/2025
